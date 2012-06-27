@@ -384,10 +384,12 @@ Cpp(const struct parser_param *param)
 				 * We should rewrite the whole.
 				 */
 				char savetok[MAXTOKEN];
+				char tagname[MAXTOKEN];
 				int savelineno = 0;
 				int typedef_savelevel = level;
 
 				savetok[0] = 0;
+				tagname[0] = 0;
 
 				/* skip CV qualifiers */
 				do {
@@ -407,6 +409,8 @@ Cpp(const struct parser_param *param)
 					if (c == SYMBOL) {
 						if (peekc(0) == '{') /* } */ {
 							PUT(PARSER_DEF, token, lineno, sp);
+							/* Avoid putting the typedef if it has the same name. */
+							strlimcpy(tagname, token, sizeof(tagname));
 						} else {
 							PUT(PARSER_REF_SYM, token, lineno, sp);
 						}
@@ -489,7 +493,10 @@ Cpp(const struct parser_param *param)
 						}
 					} else if (c == ',' || c == ';') {
 						if (savetok[0]) {
-							PUT(PARSER_DEF, savetok, lineno, sp);
+							/* Now, avoid putting if the new name is the same as the old. */
+							if (strncmp(savetok, tagname, sizeof(tagname)))
+								PUT(PARSER_DEF, savetok, lineno, sp);
+							tagname[0] = 0;
 							savetok[0] = 0;
 						}
 					}
